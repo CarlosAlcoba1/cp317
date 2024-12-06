@@ -5,7 +5,34 @@ from openpyxl import workbook, load_workbook
 from datetime import datetime, timedelta
 
 EXCEL_FILE = "Database.xlsx"
+PASSWORD = "1234"
 
+
+def safety_check():
+    safety_window = Toplevel(root)
+    safety_window.title("Enter Password")
+    safety_window.geometry("200x150")
+    safety_window.resizable(False, False)
+    pass_label = Label(safety_window, text="Enter the Password:", font=("Arial", 12))
+    pass_label.pack(pady=10)
+
+    password_entry = Entry(safety_window, font=("Arial", 12), show="*", width=20)
+    password_entry.pack(pady=5)
+
+    def password_check():
+        entered_password = password_entry.get()
+        if entered_password == PASSWORD:
+            safety_window.destroy()
+            start_app()
+        else:
+            messagebox.showerror("Access Denied", "Incorrect Password. Try again.")
+            password_entry.delete(0, tk.END)
+
+    submit_button = Button(safety_window, text="Submit", command=password_check, width=10)
+    submit_button.pack(pady=10)
+
+    # Prevent interaction with the main window until the password window is closed
+    safety_window.grab_set()
 
 def start_app():
     update_rooms()
@@ -53,7 +80,7 @@ def main_menu():
     image_label.pack(pady=20)
 
     # Buttons
-    button1 = tk.Button(root, text="Start Application", command=start_app, width=40, height=3)
+    button1 = tk.Button(root, text="Start Application", command=safety_check, width=40, height=3)
     button1.pack(pady=10)
 
     button2 = tk.Button(root, text="Close Application", command=root.destroy, width=40, height=3)
