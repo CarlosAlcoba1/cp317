@@ -27,6 +27,9 @@ def start_app():
     booking_room_button = tk.Button(root, text="Book a Room", command=booking_page, width=20, height=2)
     booking_room_button.pack(pady=20)
 
+    test_button = tk.Button(root, text="sofware test", command=software_testing, width=20, height=2)
+    test_button.pack(pady=20)
+
     back_button = tk.Button(root, text="Back", command=main_menu, width=20, height=2)
     back_button.pack(pady=20)
 
@@ -373,7 +376,7 @@ def update_rooms():
         cell_availability = sheet.cell(row=i, column=5)
         if "No" == cell_availability.value:
             current_date = datetime.now().date()
-            if current_date > sheet.cell(row=i, column=7).value.date():
+            if current_date >= datetime.strptime(sheet.cell(row=i, column=7).value, "%Y-%m-%d").date():
                 sheet.cell(row=i, column=5).value = 'Yes'
                 sheet.cell(row=i, column=6).value = None
                 sheet.cell(row=i, column=7).value = None
@@ -382,7 +385,22 @@ def update_rooms():
                 sheet.cell(row=i, column=10).value = None
                 workbook.save(EXCEL_FILE)
 
+def software_testing():
+    workbook = load_workbook(EXCEL_FILE)
+    sheet = workbook.active
+    i =  sheet.max_row + 1
+    sheet.cell(row=i, column=1).value = "TestingRoom"
+    sheet.cell(row=i, column=2).value = "N/A"
+    sheet.cell(row=i, column=3).value = "N/A"
+    sheet.cell(row=i, column=4).value = "N/A"
+    sheet.cell(row=i, column=5).value = "No"
+    sheet.cell(row=i, column=6).value = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
+    sheet.cell(row=i, column=7).value = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    sheet.cell(row=i, column=8).value = "Testing"
+    sheet.cell(row=i, column=9).value = "N/A"
+    sheet.cell(row=i, column=10).value = ", ".join([])
 
+    workbook.save(EXCEL_FILE)
 
 # Create the main application window
 root = tk.Tk()
