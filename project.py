@@ -1,7 +1,8 @@
 import tkinter as tk
-from tkinter import Label, ttk, messagebox
+from tkinter import ttk, Tk, Toplevel, Label, Entry, Button, StringVar, messagebox, Checkbutton
 from PIL import Image, ImageTk
 from openpyxl import workbook, load_workbook
+from datetime import datetime, timedelta
 
 EXCEL_FILE = "Database.xlsx"
 
@@ -21,6 +22,9 @@ def start_app():
     remove_rooms_button = tk.Button(root, text="Remove Rooms", command=remove_rooms, width=20, height=2)
     remove_rooms_button.pack(pady=20)
 
+    # Booking room
+    booking_room_button = tk.Button(root, text="Book a Room", command=booking_page, width=20, height=2)
+    booking_room_button.pack(pady=20)
 
     back_button = tk.Button(root, text="Back", command=main_menu, width=20, height=2)
     back_button.pack(pady=20)
@@ -198,8 +202,169 @@ def remove_rooms():
     back_button = tk.Button(root, text="Back", command=start_app, width=20, height=2)
     back_button.pack(pady=20)
 
+def booking_page():
+    def booking(room):
+        for i in range(2, sheet.max_row + 1):
+            room_number = sheet.cell(row=i, column=1).value
+            room_type = sheet.cell(row=i, column=2).value
+            price = float(sheet.cell(row=i, column=3).value)
+            view = sheet.cell(row=i, column=4).value
+            available = sheet.cell(row=i, column=5).value
+
+            if room_number == room and available.strip().lower() == "yes":
+                # Create a new booking window
+                booking_window = Toplevel(root)
+                booking_window.title(f"Book Room {room}")
+                booking_window.geometry("720x480")
+
+                # Room information
+                Label(booking_window, text=f"Room Number: {room_number}", font=("Arial", 12)).pack(pady=5)
+                Label(booking_window, text=f"Type: {room_type}", font=("Arial", 12)).pack(pady=5)
+                Label(booking_window, text=f"Price per Day: ${price:,.2f}", font=("Arial", 12)).pack(pady=5)
+                Label(booking_window, text=f"View: {view}", font=("Arial", 12)).pack(pady=5)
+
+                # Inputs
+                Label(booking_window, text="Client Name:", font=("Arial", 12)).pack(pady=5)
+                client_name_entry = Entry(booking_window, font=("Arial", 12), width=30)
+                client_name_entry.pack(pady=5)
+
+                Label(booking_window, text="Phone number:", font=("Arial", 12)).pack(pady=5)
+                client_phone_entry = Entry(booking_window, font=("Arial", 12), width=30)
+                client_phone_entry.pack(pady=5)
+
+                Label(booking_window, text="Number of Days:", font=("Arial", 12)).pack(pady=5)
+                days_entry = Entry(booking_window, font=("Arial", 12), width=10)
+                days_entry.pack(pady=5)
+
+                # total price
+                total_price_label = Label(booking_window, text="Total Price: $0.00", font=("Arial", 12))
+                total_price_label.pack(pady=5)
+
+                amenities = {
+                    "Pool": 20,
+                    "Room Service": 15,
+                    "Breakfast": 10,
+                    "Dinner": 25,
+                }
+                selected_amenities = []
+
+                # calculate total price
+                def calculate_price(*args):
+                    try:
+                        days = int(days_entry.get())
+                    except ValueError:
+                        days = 0
+                    amenities_price = sum(
+                        price for amenity, price in amenities.items() if amenity in selected_amenities
+                    )
+                    total_price = (days * price) + amenities_price
+                    total_price_label.config(text=f"Total Price: ${total_price:,.2f}")
+
+                def toggle_amenity(amenity):
+                    if amenity in selected_amenities:
+                        selected_amenities.remove(amenity)
+                    else:
+                        selected_amenities.append(amenity)
+                    calculate_price()
+
+                for amenity, amenity_price in amenities.items():
+                    var = tk.BooleanVar()
+                    cb = Checkbutton(
+                        booking_window,
+                        text=f"{amenity} (${amenity_price})",
+                        font=("Arial", 10),
+                        variable=var,
+                        command=lambda a=amenity: toggle_amenity(a),
+                    )
+                    cb.pack(anchor="w")
+                # Bind entry field to calculate total price dynamically
+                days_entry.bind("<KeyRelease>", calculate_price)
+
+                # Book button
+                def confirm_booking():
+                    client_name = client_name_entry.get()
+                    client_phone = client_phone_entry.get()
+                    if not client_name or not days_entry.get().isdigit() or not client_phone:
+                        Label(booking_window, text="Please fill out all fields correctly.", font=("Arial", 12),
+                              fg="red").pack(pady=5)
+                        return
+
+                    current_date = datetime.now().strftime("%Y-%m-%d")  # Format: YYYY-MM-DD
+                    days = int(days_entry.get())
+                    available_date = (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+
+                    # Update Excel file
+                    sheet.cell(row=i, column=6).value = current_date
+                    sheet.cell(row=i, column=7).value = available_date
+                    sheet.cell(row=i, column=8).value = client_name
+                    sheet.cell(row=i, column=9).value = client_phone
+                    sheet.cell(row=i, column=10).value = ", ".join(selected_amenities)
+                    sheet.cell(row=i, column=5).value = "No"
+                    workbook.save(EXCEL_FILE)
+                    booking_window.destroy()
+                    booking_page()
+
+                Button(booking_window, text="Confirm Booking", command=confirm_booking).pack(pady=10)
+
+                Button(booking_window, text="Cancel", command=booking_window.destroy).pack(pady=10)
+
+                break
 
 
+
+
+    for widget in root.winfo_children():
+        widget.destroy()
+
+
+    workbook = load_workbook(EXCEL_FILE)
+    sheet = workbook.active
+
+    table = ttk.Treeview(root, columns=("Room Number", "Room Type", "Price", "View", "Available"), show="headings",
+                         height=10)
+    table.pack(pady=20, fill="both", expand=True)
+
+    table.heading("Room Number", text="Room Number")
+    table.heading("Room Type", text="Room Type")
+    table.heading("Price", text="Price")
+    table.heading("View", text="View")
+    table.heading("Available", text="Available")
+
+    table.column("Room Number", anchor="center", width=100)
+    table.column("Room Type", anchor="center", width=150)
+    table.column("Price", anchor="center", width=100)
+    table.column("View", anchor="center", width=150)
+    table.column("Available", anchor="center", width=100)
+
+    for i in range(2, sheet.max_row + 1):
+        room_number = sheet.cell(row=i, column=1).value
+        room_type = sheet.cell(row=i, column=2).value
+        price = float(sheet.cell(row=i, column=3).value)
+        view = sheet.cell(row=i, column=4).value
+        available = sheet.cell(row=i, column=5).value
+
+        # Only show available rooms
+        if available and available.strip().lower() == "yes":
+            table.insert("", "end", values=(room_number, room_type, f"${price:,.2f}", view, available))
+
+    def book_window():
+        selected_item = table.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "No room selected!")
+            return
+        selected_room = str(table.item(selected_item)["values"][0]).zfill(3)
+        booking(selected_room)
+
+
+    finish_button = tk.Button(root, text="Book", command=book_window, width=20, height=2)
+    finish_button.pack(pady=20)
+
+
+
+
+
+    back_button = tk.Button(root, text="Back", command=start_app, width=20, height=2)
+    back_button.pack(pady=20)
 # Create the main application window
 root = tk.Tk()
 root.title("StayZen")
