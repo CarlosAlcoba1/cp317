@@ -8,6 +8,7 @@ EXCEL_FILE = "Database.xlsx"
 
 
 def start_app():
+    update_rooms()
     for widget in root.winfo_children():
         widget.destroy()
 
@@ -215,7 +216,7 @@ def booking_page():
                 # Create a new booking window
                 booking_window = Toplevel(root)
                 booking_window.title(f"Book Room {room}")
-                booking_window.geometry("720x480")
+                booking_window.geometry("640x640")
 
                 # Room information
                 Label(booking_window, text=f"Room Number: {room_number}", font=("Arial", 12)).pack(pady=5)
@@ -236,15 +237,13 @@ def booking_page():
                 days_entry = Entry(booking_window, font=("Arial", 12), width=10)
                 days_entry.pack(pady=5)
 
-                # total price
-                total_price_label = Label(booking_window, text="Total Price: $0.00", font=("Arial", 12))
-                total_price_label.pack(pady=5)
+                Label(booking_window, text="Amenities:", font=("Arial", 12)).pack(pady=5)
 
                 amenities = {
                     "Pool": 20,
-                    "Room Service": 15,
-                    "Breakfast": 10,
-                    "Dinner": 25,
+                    "Room Service": 45,
+                    "Breakfast": 15,
+                    "Dinner": 45,
                 }
                 selected_amenities = []
 
@@ -276,7 +275,7 @@ def booking_page():
                         variable=var,
                         command=lambda a=amenity: toggle_amenity(a),
                     )
-                    cb.pack(anchor="w")
+                    cb.pack(pady=1)
                 # Bind entry field to calculate total price dynamically
                 days_entry.bind("<KeyRelease>", calculate_price)
 
@@ -303,6 +302,10 @@ def booking_page():
                     workbook.save(EXCEL_FILE)
                     booking_window.destroy()
                     booking_page()
+
+                # total price
+                total_price_label = Label(booking_window, text="Total Price: $0.00", font=("Arial", 12))
+                total_price_label.pack(pady=5)
 
                 Button(booking_window, text="Confirm Booking", command=confirm_booking).pack(pady=10)
 
@@ -359,12 +362,28 @@ def booking_page():
     finish_button = tk.Button(root, text="Book", command=book_window, width=20, height=2)
     finish_button.pack(pady=20)
 
-
-
-
-
     back_button = tk.Button(root, text="Back", command=start_app, width=20, height=2)
     back_button.pack(pady=20)
+
+def update_rooms():
+    workbook = load_workbook(EXCEL_FILE)
+    sheet = workbook.active
+
+    for i in range(1, sheet.max_row + 1):
+        cell_availability = sheet.cell(row=i, column=5)
+        if "No" == cell_availability.value:
+            current_date = datetime.now().date()
+            if current_date > sheet.cell(row=i, column=7).value.date():
+                sheet.cell(row=i, column=5).value = 'Yes'
+                sheet.cell(row=i, column=6).value = None
+                sheet.cell(row=i, column=7).value = None
+                sheet.cell(row=i, column=8).value = None
+                sheet.cell(row=i, column=9).value = None
+                sheet.cell(row=i, column=10).value = None
+                workbook.save(EXCEL_FILE)
+
+
+
 # Create the main application window
 root = tk.Tk()
 root.title("StayZen")
