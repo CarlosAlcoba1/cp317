@@ -57,8 +57,12 @@ def start_app():
     test_button = tk.Button(root, text="sofware test", command=software_testing, width=20, height=2)
     test_button.pack(pady=20)
 
+    edit_rooms_button = tk.Button(root, text="Edit Rooms", command=edit_rooms, width=20, height=2)
+    edit_rooms_button.pack(pady=20)
+
     back_button = tk.Button(root, text="Back", command=main_menu, width=20, height=2)
     back_button.pack(pady=20)
+
 
 
 def main_menu():
@@ -232,6 +236,131 @@ def remove_rooms():
 
     back_button = tk.Button(root, text="Back", command=start_app, width=20, height=2)
     back_button.pack(pady=20)
+    
+def edit_rooms():
+    # Clear the current window
+    for widget in root.winfo_children():
+        widget.destroy()
+
+    # Title
+    title = tk.Label(root, text="Edit Rooms", font=("Arial", 25))
+    title.pack(pady=(50, 10))
+
+    # Load the Excel file
+    workbook = load_workbook(EXCEL_FILE)
+    sheet = workbook.active
+
+    # Table to display rooms
+    table = ttk.Treeview(root, columns=("Room Number", "Type", "Price", "View", "Available"), show="headings")
+    table.pack(pady=20, fill="both", expand=True)
+
+    # Define table headings
+    table.heading("Room Number", text="Room Number")
+    table.heading("Type", text="Type")
+    table.heading("Price", text="Price")
+    table.heading("View", text="View")
+    table.heading("Available", text="Available")
+
+    table.column("Room Number", anchor="center", width=100)
+    table.column("Type", anchor="center", width=150)
+    table.column("Price", anchor="center", width=100)
+    table.column("View", anchor="center", width=150)
+    table.column("Available", anchor="center", width=100)
+
+    # Populate the table with room data
+    for i in range(2, sheet.max_row + 1):
+        room_number = sheet.cell(row=i, column=1).value
+        if not room_number:
+            continue
+        room_type = sheet.cell(row=i, column=2).value
+        price = sheet.cell(row=i, column=3).value
+        view = sheet.cell(row=i, column=4).value
+        available = sheet.cell(row=i, column=5).value
+        table.insert("", "end", values=(room_number, room_type, price, view, available))
+
+    # Define variables for room fields
+    room_number_var = tk.StringVar()
+    rType_var = tk.StringVar()
+    rPrice_var = tk.StringVar()
+    rView_var = tk.StringVar()
+    available_var = tk.IntVar()
+
+    # Frame for editing room details
+    details_frame = tk.Frame(root)
+    details_frame.pack(pady=20)
+
+    # Room Number (read-only)
+    tk.Label(details_frame, text="Room Number:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+    tk.Entry(details_frame, textvariable=room_number_var, state="readonly", width=20).grid(row=0, column=1, padx=5, pady=5)
+
+    # Room Type
+    tk.Label(details_frame, text="Room Type:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+    ttk.Combobox(details_frame, textvariable=rType_var, values=["Single Room", "Double Room", "Suite", "Deluxe Room"],
+                 state="readonly", width=18).grid(row=1, column=1, padx=5, pady=5)
+
+    # Room Price
+    tk.Label(details_frame, text="Room Price:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+    tk.Entry(details_frame, textvariable=rPrice_var, width=20).grid(row=2, column=1, padx=5, pady=5)
+
+    # Room View
+    tk.Label(details_frame, text="Room View:").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+    ttk.Combobox(details_frame, textvariable=rView_var,
+                 values=["None", "Ocean", "Monument", "City", "Garden", "Pool"], state="readonly",
+                 width=18).grid(row=3, column=1, padx=5, pady=5)
+
+    # Room Availability
+    tk.Checkbutton(details_frame, text="Available", variable=available_var).grid(row=4, column=1, pady=5, sticky="w")
+
+    # Populate fields on room selection
+    def populate_fields(event):
+        selected_item = table.selection()
+        if not selected_item:
+            return
+
+        selected_room = table.item(selected_item)["values"]
+        room_number_var.set(selected_room[0])
+        rType_var.set(selected_room[1])
+        rPrice_var.set(selected_room[2])
+        rView_var.set(selected_room[3])
+        available_var.set(1 if selected_room[4].strip().lower() == "yes" else 0)
+
+    table.bind("<<TreeviewSelect>>", populate_fields)
+
+    # Update room in Excel
+    def update_room():
+        selected_item = table.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "No room selected!")
+            return
+
+        room_number = room_number_var.get()
+        if not rType_var.get() or not rPrice_var.get() or not rView_var.get():
+            messagebox.showerror("Error", "All fields must be filled!")
+            return
+
+        try:
+            price = float(rPrice_var.get())
+            if price <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Error", "Room price must be a positive number!")
+            return
+
+        for i in range(2, sheet.max_row + 1):
+            if sheet.cell(row=i, column=1).value == room_number:
+                sheet.cell(row=i, column=2).value = rType_var.get()
+                sheet.cell(row=i, column=3).value = price
+                sheet.cell(row=i, column=4).value = rView_var.get()
+                sheet.cell(row=i, column=5).value = "Yes" if available_var.get() else "No"
+                workbook.save(EXCEL_FILE)
+                messagebox.showinfo("Success", f"Room {room_number} updated successfully!")
+                edit_rooms()
+                return
+
+    # Buttons
+    tk.Button(root, text="Update Room", command=update_room, width=20, height=2).pack(pady=10)
+    tk.Button(root, text="Back", command=start_app, width=20, height=2).pack(pady=10)
+
 
 def booking_page():
     def booking(room):
